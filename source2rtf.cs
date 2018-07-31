@@ -15,6 +15,7 @@ namespace source2rtf
         //Key options
         private static bool _recursively;
         private static List<string> _ext_list;
+        private static List<string> _exclude_list;
         private static Encoding _output_encoding;
 
         static int Main(string[] args)
@@ -27,6 +28,7 @@ namespace source2rtf
 
             _recursively = false;
             _ext_list = new List<string>(); _ext_list.Add("*.cs");
+            _exclude_list = new List<string>();
             _output_encoding = Encoding.Default;
             #endregion
 
@@ -67,9 +69,19 @@ namespace source2rtf
                         _ext_list = new List<string>(exts);
                     }
                 }
+
+                if (args[a].ToLower().StartsWith("/x:"))
+                {
+                    string[] splited1 = args[a].ToLower().Split(':');
+                    if (splited1.Length == 2)
+                    {
+                        string[] words = splited1[1].Split(',');
+                        _exclude_list = new List<string>(words);
+                    }
+                }
             }
 
-            _source_files = ScanInputDirectory(_input_directory, _recursively, _ext_list);
+            _source_files = ScanInputDirectory(_input_directory, _recursively, _ext_list, _exclude_list);
 
             if (_source_files.Count == 0)
             {
@@ -131,7 +143,7 @@ namespace source2rtf
         } 
         #endregion
 
-        private static List<string> ScanInputDirectory(string dir_path, bool recur, List<string> extentions)
+        private static List<string> ScanInputDirectory(string dir_path, bool recur, List<string> extentions, List<string> exclude_words)
         {
             List<string> ret_list = new List<string>();
 
@@ -149,8 +161,29 @@ namespace source2rtf
             FileInfo[] files = dir.GetFiles("*", s_opt);
 
             for (int i = 0; i < files.Length; i++)
+            {
                 if (extentions.Contains(files[i].Extension))
-                    ret_list.Add(files[i].FullName);
+                {
+                    bool needToExclude = false;
+                    for (int x = 0; x < exclude_words.Count; x++)
+                    {
+                        if (files[i].FullName.ToLower().Contains(exclude_words[x]))
+                        {
+                            needToExclude = true;
+                        }
+                        //string str1 = string.Format("{0} - {1}", files[i].FullName, exclude_words[x]);
+                        //Console.WriteLine(str1);
+                    }
+
+                    //string str2 = string.Format("needToExclude - {0}", needToExclude);
+                    //Console.WriteLine(str2);
+                    if (!needToExclude)
+                    {
+                        ret_list.Add(files[i].FullName); 
+                        //Console.WriteLine("file added");
+                    }
+                }
+            }
 
             return ret_list;
         }
